@@ -6,7 +6,7 @@ on:
      - main
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_REGION: ${{ secrets.AWS_REGION || 'ap-south-1' }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }} 
 
 jobs: 
@@ -20,9 +20,9 @@ jobs:
       - name: aws configure
         uses: aws-actions/configure-aws-credentials@v4
         with: 
-          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY}}
-          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          aws-region: ${{env.AWS_REGION}}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY || secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-south-1' }}
 
       - name: Login to ECR
         id: login-ecr
@@ -40,9 +40,6 @@ jobs:
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/gateway:latest  
 
-
-
-
       - name: Build Auth 
         run: |
           docker build -f backend/services/auth/Dockerfile -t auth-service backend 
@@ -54,8 +51,6 @@ jobs:
       - name: push auth 
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest 
-
-
 
       - name: Build Chat 
         run: |
@@ -69,8 +64,6 @@ jobs:
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/chat-service:latest
 
-
-
       - name: Build agent 
         run: |
           docker build -f backend/services/agent/Dockerfile -t agent-service backend 
@@ -82,9 +75,6 @@ jobs:
       - name: push agent 
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/agent-service:latest
-
-
-
 
       - name: Build billing 
         run: |
@@ -98,14 +88,12 @@ jobs:
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/billing-service:latest  
 
-
       - name: deploy gateway
         run: |
           aws ecs update-service \
           --cluster ${{secrets.ECS_CLUSTER}} \
           --service ${{secrets.GATEWAY_SERVICE}} \
           --force-new-deployment
-
 
       - name: deploy auth
         run: |
@@ -120,7 +108,6 @@ jobs:
           --cluster ${{secrets.ECS_CLUSTER}} \
           --service ${{secrets.CHAT_SERVICE}} \
           --force-new-deployment          
-
 
       - name: deploy agent
         run: |
@@ -143,6 +130,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4 
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: build frontend
         run: | 
           cd frontend
@@ -152,9 +144,9 @@ jobs:
       - name: aws configure
         uses: aws-actions/configure-aws-credentials@v4
         with: 
-          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY}}
-          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          aws-region: ${{env.AWS_REGION}}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY || secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY || secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-south-1' }}
 
       - name: upload to s3
         run: |
@@ -169,6 +161,3 @@ jobs:
           --distribution-id \
           ${{secrets.CLOUDFRONT_DISTRIBUTION_ID}} \
           --paths "/*"
-
-
-        
